@@ -6,29 +6,32 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/*
-クラス名      : App
-機能          : Todoアプリケーションの起動およびHTTPリクエスト処理
-概要          : com.sun.net.httpserver を利用して、Todoの追加・一覧・完了・未完了・削除を行う。
-作成者        : 要確認
-作成日        : 要確認
-更新履歴      : 2026-08-20 コメント追加
-                2026-08-20 文字化け修正
-*/
+/**
+ * クラス名: App
+ * 機能: Todoアプリケーションの起動およびHTTPリクエスト処理
+ * 概要: com.sun.net.httpserver を利用して、Todoの追加・一覧・完了・未完了・削除を行う。
+ * 作成者: 要確認
+ * 作成日: 要確認
+ * 更新履歴:
+ * 2026-08-20 Javadoc形式へ変更
+ */
 public class App {
     static List<Todo> todos = new ArrayList<>();
     static int nextId = 1;
     static final int MAX_TODO_LENGTH = 80;
 
-    /*
-    メソッド名    : main
-    機能          : アプリケーションを起動する
-    引数          : String[] args - 起動引数（要確認）
-    戻り値        : なし
-    例外          : Exception
-    処理概要      : 初期データを登録し、HTTPサーバをポート8080で起動する。
-                    受信したパスに応じてTodoの追加・一覧・完了・未完了・削除を処理する。
-    */
+    /**
+     * メソッド名: main
+     * 機能: アプリケーションを起動する
+     * 引数: args - 起動引数（要確認）
+     * 戻り値: なし
+     * 例外: Exception
+     * 処理概要: 初期データを登録し、HTTPサーバをポート8080で起動する。
+     * 受信したパスに応じてTodoの追加・一覧・完了・未完了・削除を処理する。
+     *
+     * @param args 起動引数（要確認）
+     * @throws Exception サーバ起動時またはリクエスト処理設定時に例外が発生した場合
+     */
     public static void main(String[] args) throws Exception {
         todos.add(new Todo(nextId++, "牛乳を買う"));
         Todo egg = new Todo(nextId++, "卵を買う");
@@ -198,15 +201,18 @@ public class App {
         System.out.println("サーバー起動: http://localhost:8080 (止めるときは Ctrl+C)");
     }
 
-    /*
-    メソッド名    : parseId
-    機能          : クエリ文字列からIDを取得する
-    引数          : String query - リクエストのクエリ文字列
-    戻り値        : Integer - 取得したID。取得できない場合は null
-    例外          : なし
-    処理概要      : query が id= で始まるかを確認し、数値に変換して返す。
-                    数値変換できない場合や形式不正の場合は null を返す。
-    */
+    /**
+     * メソッド名: parseId
+     * 機能: クエリ文字列からIDを取得する
+     * 引数: query - リクエストのクエリ文字列
+     * 戻り値: 取得したID。取得できない場合は null
+     * 例外: なし
+     * 処理概要: query が id= で始まるかを確認し、数値に変換して返す。
+     * 数値変換できない場合や形式不正の場合は null を返す。
+     *
+     * @param query リクエストのクエリ文字列
+     * @return 取得したID。取得できない場合は null
+     */
     static Integer parseId(String query) {
         if (query == null || !query.startsWith("id=") || query.length() <= 3) {
             return null;
@@ -219,15 +225,18 @@ public class App {
         }
     }
 
-    /*
-    メソッド名    : escapeHtml
-    機能          : HTML特殊文字をエスケープする
-    引数          : String text - HTML表示用に変換する文字列
-    戻り値        : String - エスケープ後の文字列
-    例外          : なし
-    処理概要      : &, <, >, " , ' を HTMLエンティティへ置換し、
-                    ブラウザ表示時の文字崩れや意図しない解釈を抑止する。
-    */
+    /**
+     * メソッド名: escapeHtml
+     * 機能: HTML特殊文字をエスケープする
+     * 引数: text - HTML表示用に変換する文字列
+     * 戻り値: エスケープ後の文字列
+     * 例外: なし
+     * 処理概要: &, <, >, ", ' を HTMLエンティティへ置換し、
+     * ブラウザ表示時の文字崩れや意図しない解釈を抑止する。
+     *
+     * @param text HTML表示用に変換する文字列
+     * @return エスケープ後の文字列
+     */
     static String escapeHtml(String text) {
         return text
                 .replace("&", "&amp;")
@@ -238,79 +247,90 @@ public class App {
     }
 }
 
-/*
-クラス名      : Todo
-機能          : Todo情報の保持
-概要          : 1件分のTodoについて、ID、タイトル、完了状態を保持する。
-作成者        : 要確認
-作成日        : 要確認
-更新履歴      : 2026-08-20 コメント追加
-                2026-08-20 文字化け修正
-*/
+/**
+ * クラス名: Todo
+ * 機能: Todo情報の保持
+ * 概要: 1件分のTodoについて、ID、タイトル、完了状態を保持する。
+ * 作成者: 要確認
+ * 作成日: 要確認
+ * 更新履歴:
+ * 2026-08-20 Javadoc形式へ変更
+ */
 class Todo {
     private final int id;
     private final String title;
     private boolean done;
 
-    /*
-    メソッド名    : Todo
-    機能          : Todoオブジェクトを生成する
-    引数          : int id - Todoの識別子
-                    String title - Todoのタイトル
-    戻り値        : なし
-    例外          : なし
-    処理概要      : IDとタイトルを設定し、完了状態を未完了(false)で初期化する。
-    */
+    /**
+     * メソッド名: Todo
+     * 機能: Todoオブジェクトを生成する
+     * 引数: id - Todoの識別子
+     * title - Todoのタイトル
+     * 戻り値: なし
+     * 例外: なし
+     * 処理概要: IDとタイトルを設定し、完了状態を未完了(false)で初期化する。
+     *
+     * @param id Todoの識別子
+     * @param title Todoのタイトル
+     */
     Todo(int id, String title) {
         this.id = id;
         this.title = title;
         this.done = false;
     }
 
-    /*
-    メソッド名    : getId
-    機能          : TodoのIDを取得する
-    引数          : なし
-    戻り値        : int - TodoのID
-    例外          : なし
-    処理概要      : 保持しているIDを返す。
-    */
+    /**
+     * メソッド名: getId
+     * 機能: TodoのIDを取得する
+     * 引数: なし
+     * 戻り値: TodoのID
+     * 例外: なし
+     * 処理概要: 保持しているIDを返す。
+     *
+     * @return TodoのID
+     */
     int getId() {
         return id;
     }
 
-    /*
-    メソッド名    : getTitle
-    機能          : Todoのタイトルを取得する
-    引数          : なし
-    戻り値        : String - Todoのタイトル
-    例外          : なし
-    処理概要      : 保持しているタイトルを返す。
-    */
+    /**
+     * メソッド名: getTitle
+     * 機能: Todoのタイトルを取得する
+     * 引数: なし
+     * 戻り値: Todoのタイトル
+     * 例外: なし
+     * 処理概要: 保持しているタイトルを返す。
+     *
+     * @return Todoのタイトル
+     */
     String getTitle() {
         return title;
     }
 
-    /*
-    メソッド名    : isDone
-    機能          : Todoの完了状態を取得する
-    引数          : なし
-    戻り値        : boolean - 完了状態。完了時 true、未完了時 false
-    例外          : なし
-    処理概要      : 保持している完了状態を返す。
-    */
+    /**
+     * メソッド名: isDone
+     * 機能: Todoの完了状態を取得する
+     * 引数: なし
+     * 戻り値: 完了状態。完了時 true、未完了時 false
+     * 例外: なし
+     * 処理概要: 保持している完了状態を返す。
+     *
+     * @return 完了状態。完了時 true、未完了時 false
+     */
     boolean isDone() {
         return done;
     }
 
-    /*
-    メソッド名    : setDone
-    機能          : Todoの完了状態を設定する
-    引数          : boolean done - 設定する完了状態
-    戻り値        : なし
-    例外          : なし
-    処理概要      : 引数で受け取った値を完了状態として設定する。
-    */
+    /**
+     * メソッド名: setDone
+     * 機能: Todoの完了状態を設定する
+     * 引数: done - 設定する完了状態
+     * 戻り値: なし
+     * 例外: なし
+     * 処理概要: 引数で受け取った値を完了状態として設定する。
+     *
+     * @param done 設定する完了状態
+     */
     void setDone(boolean done) {
         this.done = done;
     }
