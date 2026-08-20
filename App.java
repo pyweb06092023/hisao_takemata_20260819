@@ -1,6 +1,7 @@
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.List;
 public class App {
     static List<Todo> todos = new ArrayList<>();
     static int nextId = 1;
+    static final int MAX_TODO_LENGTH = 80;
 
     public static void main(String[] args) throws Exception {
         todos.add(new Todo(nextId++, "牛乳を買う"));
@@ -26,7 +28,9 @@ public class App {
                 String value = "";
                 if (method.equals("POST")) {
                     String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-                    value = body.substring(5);
+                    if (body.startsWith("todo=") && body.length() > 5) {
+                        value = body.substring(5);
+                    }
                 } else {
                     String query = exchange.getRequestURI().getQuery();
                     if (query != null && query.startsWith("todo=") && query.length() > 5) {
@@ -35,6 +39,14 @@ public class App {
                 }
 
                 String title = URLDecoder.decode(value, StandardCharsets.UTF_8);
+                if (title.length() > MAX_TODO_LENGTH) {
+                    String encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8);
+                    exchange.getResponseHeaders().set("Location", "/?error=too_long&todo=" + encodedTitle);
+                    exchange.sendResponseHeaders(303, -1);
+                    exchange.close();
+                    return;
+                }
+
                 if (!title.isEmpty()) {
                     todos.add(new Todo(nextId, title));
                     nextId++;
@@ -64,6 +76,26 @@ public class App {
                 exchange.sendResponseHeaders(303, -1);
                 exchange.close();
                 return;
+            } else if (path.equals("/undo")) {
+                String query = exchange.getRequestURI().getQuery();
+                Integer id = parseId(query);
+                if (id == null) {
+                    exchange.getResponseHeaders().set("Location", "/");
+                    exchange.sendResponseHeaders(303, -1);
+                    exchange.close();
+                    return;
+                }
+
+                for (Todo todo : todos) {
+                    if (todo.getId() == id) {
+                        todo.setDone(false);
+                    }
+                }
+
+                exchange.getResponseHeaders().set("Location", "/");
+                exchange.sendResponseHeaders(303, -1);
+                exchange.close();
+                return;
             } else if (path.equals("/delete")) {
                 String query = exchange.getRequestURI().getQuery();
                 Integer id = parseId(query);
@@ -81,6 +113,19 @@ public class App {
                 exchange.close();
                 return;
             } else if (path.equals("/")) {
+                String query = exchange.getRequestURI().getQuery();
+                String errorMessage = "";
+                String inputValue = "";
+                if (query != null) {
+                    for (String part : query.split("&")) {
+                        if (part.equals("error=too_long")) {
+                            errorMessage = "80文字までが、入力可能です。";
+                        } else if (part.startsWith("todo=") && part.length() > 5) {
+                            inputValue = URLDecoder.decode(part.substring(5), StandardCharsets.UTF_8);
+                        }
+                    }
+                }
+
                 String html = "<!doctype html>"
                         + "<html><head><meta charset='UTF-8'><title>わたしのTodo</title>"
                         + "<style>"
@@ -89,22 +134,30 @@ public class App {
                         + "form{margin-bottom:16px;}"
                         + "input,button{font-size:18px;}"
                         + "ul{padding-left:24px;}"
+                        + "p.error{color:#c62828;margin:0 0 16px;}"
                         + "</style></head><body>"
                         + "<h1>わたしのTodo</h1>"
                         + "<form method='post' action='/add'>"
-                        + "<input name='todo'><button>追加</button></form>";
+                        + "<input name='todo' value='" + escapeHtml(inputValue) + "'>"
+                        + "<button>追加</button></form>";
+
+                if (!errorMessage.isEmpty()) {
+                    html += "<p class='error'>" + errorMessage + "</p>";
+                }
 
                 if (todos.isEmpty()) {
-                    html += "<p>やることは、いまゼロです</p>";
+                    html += "<p>やることは、いまゼロです。</p>";
                 } else {
                     html += "<ul>";
                     for (Todo todo : todos) {
                         String mark = "";
+                        String actionLink = " <a href='/done?id=" + todo.getId() + "'>完了</a>";
                         if (todo.isDone()) {
                             mark = " ✓";
+                            actionLink = " <a href='/undo?id=" + todo.getId() + "'>未完了</a>";
                         }
-                        html += "<li>" + todo.getTitle() + mark
-                                + " <a href='/done?id=" + todo.getId() + "'>完了</a>"
+                        html += "<li>" + escapeHtml(todo.getTitle()) + mark
+                                + actionLink
                                 + " <a href='/delete?id=" + todo.getId() + "'>削除</a></li>";
                     }
                     html += "</ul>";
@@ -137,6 +190,15 @@ public class App {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    static String escapeHtml(String text) {
+        return text
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 }
 
